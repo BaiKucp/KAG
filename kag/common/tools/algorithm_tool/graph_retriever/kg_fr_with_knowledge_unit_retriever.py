@@ -205,7 +205,7 @@ class KgFreeRetrieverWithKnowledgeUnitRetriever(RetrieverABC):
         # 1、atomic query search
         top_atmoic_query_units = self.search_api.search_vector(
             label=self.schema_helper.get_label_within_prefix("AtomicQuery"),
-            property_key="name",
+            property_key="title",
             query_vector=query_vector,
             topk=self.top_k,
         )
@@ -215,10 +215,10 @@ class KgFreeRetrieverWithKnowledgeUnitRetriever(RetrieverABC):
             if score > 0.7:
                 matched_entities.append(convert_search_rst_2_entity(top_entity))
 
-        # 2 knowledge unit
+        # 2 knowledge unit - search by content property which has TextAndVector index
         top_knowledge_units = self.search_api.search_vector(
             label=self.schema_helper.get_label_within_prefix("KnowledgeUnit"),
-            property_key="name",
+            property_key="content",
             query_vector=query_vector,
             topk=self.top_k,
         )

@@ -148,7 +148,7 @@ def load_config(prod: bool = False, config_file: str = None):
             config_file = _closest_cfg()
         if os.path.exists(config_file) and os.path.isfile(config_file):
             logger.debug(f"found config file: {config_file}")
-            with open(config_file, "r") as reader:
+            with open(config_file, "r", encoding='utf-8') as reader:
                 config = reader.read()
                 config = Template(config).render(**dict(os.environ))
             return yaml.safe_load(config)

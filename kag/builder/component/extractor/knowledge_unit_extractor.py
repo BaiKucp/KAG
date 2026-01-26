@@ -181,8 +181,7 @@ class KnowledgeUnitSchemaFreeExtractor(ExtractorABC):
         """
         ner_result = self._named_entity_recognition_llm(passage)
         ner_parse_rst = self._named_entity_recognition_process(passage, ner_result)
-        if not ner_parse_rst:
-            raise
+        # If empty, just return empty list. Do not raise error, as some chunks might genuinely have no entities.
         return ner_parse_rst
 
     @retry(
@@ -305,11 +304,14 @@ class KnowledgeUnitSchemaFreeExtractor(ExtractorABC):
         record["category"] = s_label
 
         domain_ontology = properties.get("ontology", "")
-        domain_ontology_set = [
-            item.strip()
-            for item in domain_ontology.split("->")
-            if len(item.strip()) > 0
-        ]
+        if isinstance(domain_ontology, str):
+            domain_ontology_set = [
+                item.strip()
+                for item in domain_ontology.split("->")
+                if len(item.strip()) > 0
+            ]
+        else:
+            domain_ontology_set = []
         if domain_ontology_set:
             last_id = None
             # 最高级的本体
@@ -561,11 +563,12 @@ class KnowledgeUnitSchemaFreeExtractor(ExtractorABC):
                 knowledge_units[knowledge_unit_name] = knowledge_unit_value
 
         for knowledge_name, knowledge_value in knowledge_units.items():
-            if knowledge_value["knowledgetype"] == "triple":
+            if knowledge_value.get("knowledgetype") == "triple":
                 knowledge_id = knowledge_name
             else:
+                content = knowledge_value.get("content", "")
                 knowledge_id = generate_hash_id(
-                    f"{knowledge_name}_{knowledge_value['content'].strip()[:100]}"
+                    f"{knowledge_name}_{content.strip()[:100]}"
                 )
             self.assemble_sub_graph_with_spg_properties(
                 sub_graph,

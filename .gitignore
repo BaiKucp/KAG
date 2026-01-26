@@ -16,3 +16,26 @@
 .venv/
 __pycache__/
 .DS_Store
+
+# ============================================
+# Medicine 项目 - 运行时生成的文件
+# ============================================
+
+# Checkpoint 检查点（处理进度）
+Medicine/builder/ckpt/
+
+# Data 目录（markdown 数据文件和临时文件）
+Medicine/builder/data/
+Medicine/solver/data/
+
+# Python 缓存
+Medicine/builder/__pycache__/
+Medicine/solver/__pycache__/
+Medicine/reasoner/__pycache__/
+
+# MinIO 临时文件
+Medicine/builder/data/minio_temp/
+
+# 敏感配置文件（包含 API Key）- 可选
+# 如果需要分享，建议使用 kag_config.yaml.example 模板
+# Medicine/kag_config.yaml

@@ -1,50 +1,43 @@
-#------------LLM configuration (shared by OpenSPG Server & KAG API)----------------#
+#------------project configuration start----------------#
 openie_llm: &openie_llm
   type: openai
-  base_url: https://api.siliconflow.cn/v1
+  base_url:  https://api.siliconflow.cn/v1
   api_key: sk-xmubwjeopdksjenuqmsjkvvipldehyacnmkvghpyoekwqdzz
   model: Qwen/Qwen3-8B
   enable_check: false
 
 chat_llm: &chat_llm
   type: openai
-  base_url: https://api.siliconflow.cn/v1
+  base_url:  https://api.siliconflow.cn/v1
   api_key: sk-xmubwjeopdksjenuqmsjkvvipldehyacnmkvghpyoekwqdzz
   model: deepseek-ai/DeepSeek-V3.2
   stream: true
   enable_check: false
 
+
 vectorize_model: &vectorize_model
   api_key: sk-xmubwjeopdksjenuqmsjkvvipldehyacnmkvghpyoekwqdzz
-  base_url: https://api.siliconflow.cn/v1
+  base_url:  https://api.siliconflow.cn/v1
   model: Qwen/Qwen3-Embedding-8B
   type: openai
   vector_dimensions: 1024
 vectorizer: *vectorize_model
 
-# 兼容旧格式 (OpenSPG Server 使用)
-llm:
-  type: openai
-  base_url: https://api.siliconflow.cn/v1
-  api_key: ${LLM_API_KEY:-sk-xmubwjeopdksjenuqmsjkvvipldehyacnmkvghpyoekwqdzz}
-  model: Qwen/Qwen3-8B
-
 log:
   level: INFO
 
-#------------project configuration----------------#
 project:
   biz_scene: default
-  # Docker 内部网络地址
-  host_addr: http://release-openspg-server:8887
-  id: '59'
+  host_addr: http://127.0.0.1:8887
+  id: '60'
   language: zh
-  namespace: Medici
+  namespace: Medicine
+#------------project configuration end----------------#
 
-#------------kag-builder configuration----------------#
+#------------kag-builder configuration start----------------#
 kag_builder_pipeline:
   chain:
-    type: unstructured_builder_chain
+    type: unstructured_builder_chain # kag.builder.default_chain.DefaultUnstructuredBuilderChain
     extractor:
       type: knowledge_unit_extractor
       llm: *openie_llm
@@ -55,30 +48,32 @@ kag_builder_pipeline:
       kn_prompt:
         type: knowledge_unit
     reader:
-      type: md_reader
+      type: md_reader # kag.builder.component.reader.markdown_reader.MarkDownReader
     post_processor:
-      type: kag_post_processor
+      type: kag_post_processor # kag.builder.component.postprocessor.kag_postprocessor.KAGPostProcessor
     splitter:
-      type: length_splitter
+      type: length_splitter # kag.builder.component.splitter.length_splitter.LengthSplitter
       split_length: 100000
       window_length: 0
     vectorizer:
-      type: batch_vectorizer
+      type: batch_vectorizer # kag.builder.component.vectorizer.batch_vectorizer.BatchVectorizer
       vectorize_model: *vectorize_model
     writer:
-      type: kg_writer
+      type: kg_writer # kag.builder.component.writer.kg_writer.KGWriter
   num_threads_per_chain: 1
   num_chains: 16
   scanner:
-    type: dir_file_scanner
+    type: dir_file_scanner # kag.builder.component.scanner.dir_file_scanner.DirFileScanner
     file_suffix: md
+#------------kag-builder configuration end----------------#
 
-#------------kag-solver configuration----------------#
+#------------kag-solver configuration start----------------#
 search_api: &search_api
-  type: openspg_search_api
+  type: openspg_search_api #kag.solver.tools.search_api.impl.openspg_search_api.OpenSPGSearchAPI
 
 graph_api: &graph_api
-  type: openspg_graph_api
+  type: openspg_graph_api #kag.solver.tools.graph_api.impl.openspg_graph_api.OpenSPGGraphApi
+
 
 kg_cs: &kg_cs
   type: kg_cs_open_spg
@@ -186,3 +181,5 @@ kag_solver_pipeline:
       vectorize_model: *vectorize_model
       top_k: 5
     enable_ref: true
+
+#------------kag-solver configuration end----------------#

@@ -1,84 +1,78 @@
-#------------LLM configuration (shared by OpenSPG Server & KAG API)----------------#
+#------------project configuration start----------------#
 openie_llm: &openie_llm
   type: openai
-  base_url: https://api.siliconflow.cn/v1
+  base_url:  https://api.siliconflow.cn/v1
   api_key: sk-xmubwjeopdksjenuqmsjkvvipldehyacnmkvghpyoekwqdzz
   model: Qwen/Qwen3-8B
   enable_check: false
 
 chat_llm: &chat_llm
   type: openai
-  base_url: https://api.siliconflow.cn/v1
+  base_url:  https://api.siliconflow.cn/v1
   api_key: sk-xmubwjeopdksjenuqmsjkvvipldehyacnmkvghpyoekwqdzz
   model: deepseek-ai/DeepSeek-V3.2
   stream: true
   enable_check: false
 
+
 vectorize_model: &vectorize_model
   api_key: sk-xmubwjeopdksjenuqmsjkvvipldehyacnmkvghpyoekwqdzz
-  base_url: https://api.siliconflow.cn/v1
+  base_url:  https://api.siliconflow.cn/v1
   model: Qwen/Qwen3-Embedding-8B
   type: openai
-  vector_dimensions: 1024
+  vector_dimensions: 4096
 vectorizer: *vectorize_model
-
-# 兼容旧格式 (OpenSPG Server 使用)
-llm:
-  type: openai
-  base_url: https://api.siliconflow.cn/v1
-  api_key: ${LLM_API_KEY:-sk-xmubwjeopdksjenuqmsjkvvipldehyacnmkvghpyoekwqdzz}
-  model: Qwen/Qwen3-8B
 
 log:
   level: INFO
 
-#------------project configuration----------------#
 project:
   biz_scene: default
-  # Docker 内部网络地址
-  host_addr: http://release-openspg-server:8887
-  id: '59'
+  host_addr: http://127.0.0.1:8887
+  id: '60'
   language: zh
-  namespace: Medici
+  namespace: Medicine
+#------------project configuration end----------------#
 
-#------------kag-builder configuration----------------#
+#------------kag-builder configuration start----------------#
 kag_builder_pipeline:
   chain:
     type: unstructured_builder_chain
     extractor:
-      type: knowledge_unit_extractor
+      type: medical_knowledge_unit_extractor # Use custom extractor for Medicine project
       llm: *openie_llm
-      ner_prompt:
-        type: knowledge_unit_ner
-      triple_prompt:
-        type: knowledge_unit_triple
-      kn_prompt:
-        type: knowledge_unit
+      # Catalog file will be passed dynamically or defaulted here. 
+      # Since we want to support multi-book with different catalogs, we might rely on indexer.py to pass specific config,
+      # OR set a default catalog here. For now, we set a default relative path, but note that pure YAML config limits dynamic catalog switching unless we strictly use indexer.py to override it.
+      catalog_file: ./builder/data/14.《病理学（第10版）》-绪论到第四章.md # Default catalog if not overridden
+      vectorize_model_config: *vectorize_model
     reader:
-      type: md_reader
+      type: mix_reader # Supports md, pdf, docx, txt
     post_processor:
       type: kag_post_processor
     splitter:
       type: length_splitter
-      split_length: 100000
-      window_length: 0
+      split_length: 500
+      window_length: 100
     vectorizer:
       type: batch_vectorizer
       vectorize_model: *vectorize_model
     writer:
       type: kg_writer
-  num_threads_per_chain: 1
+  num_threads_per_chain: 6
   num_chains: 16
   scanner:
     type: dir_file_scanner
-    file_suffix: md
+    file_suffix: [md, pdf, docx, txt]
+#------------kag-builder configuration end----------------#
 
-#------------kag-solver configuration----------------#
+#------------kag-solver configuration start----------------#
 search_api: &search_api
-  type: openspg_search_api
+  type: openspg_search_api #kag.solver.tools.search_api.impl.openspg_search_api.OpenSPGSearchAPI
 
 graph_api: &graph_api
-  type: openspg_graph_api
+  type: openspg_graph_api #kag.solver.tools.graph_api.impl.openspg_graph_api.OpenSPGGraphApi
+
 
 kg_cs: &kg_cs
   type: kg_cs_open_spg
@@ -102,7 +96,7 @@ kg_cs: &kg_cs
 
 kg_fr: &kg_fr
   type: kg_fr_knowledge_unit
-  top_k: 5
+  top_k: 12
   graph_api: *graph_api
   search_api: *search_api
   vectorize_model: *vectorize_model
@@ -137,10 +131,11 @@ rc: &rc
     vectorize_model: *vectorize_model
     score_threshold: 0.65
     search_api: *search_api
+    top_k: 24
   graph_api: *graph_api
   search_api: *search_api
   vectorize_model: *vectorize_model
-  top_k: 5
+  top_k: 12
 
 kag_hybrid_executor: &kag_hybrid_executor_conf
   type: kag_hybrid_retrieval_executor
@@ -184,5 +179,7 @@ kag_solver_pipeline:
     chunk_reranker:
       type: rerank_by_vector
       vectorize_model: *vectorize_model
-      top_k: 5
+      rerank_top_k: 12
     enable_ref: true
+
+#------------kag-solver configuration end----------------#

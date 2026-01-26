@@ -63,6 +63,23 @@ class SchemaUtils:
             return self.node_zh_2_full_name.get(label_name_without_prefix)
         return label_name_without_prefix
 
+    def get_all_labels_with_suffix(self, suffix: str) -> List[str]:
+        """
+        动态获取所有以指定后缀结尾的标签（支持多 namespace）
+        
+        Args:
+            suffix: 标签后缀，如 "Chunk", "Entity", "KnowledgeUnit"
+            
+        Returns:
+            所有匹配的完整标签列表，如 ["Pathology.Chunk", "Pharmacology.Chunk"]
+        """
+        matched = []
+        for full_label in self.node_en_2_full_name.values():
+            # 检查是否以 .suffix 结尾
+            if full_label.endswith(f".{suffix}"):
+                matched.append(full_label)
+        return matched
+
     def get_label_without_prefix(self, label_name_with_prefix):
         if not label_name_with_prefix:
             return label_name_with_prefix

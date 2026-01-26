@@ -1,0 +1,131 @@
+namespace Medici
+
+SemanticConcept(语义概念): EntityType
+    relations:
+        isA(上位): SemanticConcept
+
+Concept(概念): EntityType
+    properties:
+        description(描述): Text
+        name(名称): Text
+            index: TextAndVector
+        semanticType(语义类型): Text
+            index: Text
+    relations:
+        treats(治疗疾病): Disease
+        adverseEffect(不良反应): Symptom
+        hasKnowledgeUnit(包含知识点): KnowledgeUnit
+
+Others(其他): EntityType
+    relations:
+        relatedTopic(相关主题): Concept
+
+Chapter(章节): EntityType
+    properties:
+        description(描述): Text
+        name(名称): Text
+        title(标题): Text
+            index: TextAndVector
+    relations:
+        hasSections(包含小节): Section
+        nextChapter(下一章): Chapter
+
+Section(小节): EntityType
+    properties:
+        description(描述): Text
+        name(名称): Text
+        title(标题): Text
+            index: TextAndVector
+    relations:
+        belongsToChapter(所属章节): Chapter
+        nextSection(下一节): Section
+        hasKnowledgeUnit(包含知识点): KnowledgeUnit
+
+Chunk(文本块): EntityType
+    properties:
+        description(描述): Text
+        name(名称): Text
+        content(内容): Text
+            index: TextAndVector
+        pageNumber(页码): Integer
+        sequence(顺序): Integer
+    relations:
+        mentions(提及): Concept
+        mentions(提及): Disease
+        mentions(提及): Symptom
+        focusOn(核心讲解): Concept
+        hasKnowledgeUnit(包含知识点): KnowledgeUnit
+        hasSubKnowledgeUnit(包含子知识点): SubKnowledgeUnit
+
+Exercise(习题): EntityType
+    properties:
+        question(题干): Text
+            index: TextAndVector
+        answer(答案): Text
+        type(题型): Text
+    relations:
+        belongsToSection(所属小节): Section
+        testsKnowledge(考察知识点): Concept
+        relatedChunk(关联切片): Chunk
+        relatedKnowledgeUnit(关联知识点): KnowledgeUnit
+
+Textbook(教科书): EntityType
+    properties:
+        description(描述): Text
+        name(名称): Text
+    relations:
+        hasChapters(包含章节): Chapter
+
+Event(事件): EntityType
+    relations:
+        relatedDisease(相关疾病): Disease
+        involvesMedicine(涉及药品): Concept
+
+KnowledgeUnit(知识点): IndexType
+    properties:
+        description(描述): Text
+        name(名称): Text
+        extendedKnowledge(关联外扩知识点): Text
+        structedContent(结构化文本): Text
+            index: TextAndVector
+        desc(描述): Text
+            index: TextAndVector
+        knowledgeType(知识类型): Text
+        content(内容): Text
+            index: TextAndVector
+    relations:
+        sourceChunk(来源切片): Chunk
+        hasSubKnowledgeUnit(子知识点): SubKnowledgeUnit
+
+SubKnowledgeUnit(子知识点): IndexType
+    properties:
+        description(描述): Text
+        name(名称): Text
+        knowledgeType(知识类型): Text
+        content(内容): Text
+            index: TextAndVector
+        ontology(领域本体): Text
+    relations:
+        sourceChunk(来源切片): Chunk
+        parentKnowledgeUnit(父知识点): KnowledgeUnit
+
+Symptom(症状): EntityType
+    relations:
+        indicates(可能指示): Disease
+
+AtomicQuery(原子问): IndexType
+    properties:
+        description(描述): Text
+        name(名称): Text
+        title(标题): Text
+            index: TextAndVector
+    relations:
+        sourceChunk(关联文本块): Chunk
+        relatedTo(关联知识点): KnowledgeUnit
+        similar(相似问题): AtomicQuery
+
+Disease(疾病): EntityType
+    relations:
+        applicableMedicine(适用药品): Concept
+        commonSymptom(常见症状): Symptom
+        complication(并发症): Disease

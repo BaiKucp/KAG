@@ -6,6 +6,9 @@ logger = logging.getLogger(__name__)
 
 
 def load_knowIE_data(respond, lang="en"):
+    # FIX: Escape invalid backslashes globally first
+    respond = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', respond)
+    
     try:
         extract_ret = json.loads(respond)
     except:
@@ -15,6 +18,10 @@ def load_knowIE_data(respond, lang="en"):
             right_pos = respond.rfind("}") + 1
             extract_ret_str = extract_ret_str[left_pos:right_pos].strip()
             extract_ret_str = extract_ret_str.replace("\\'", "'")
+            
+            # FIX: Ensure regex fix is applied after manipulation
+            extract_ret_str = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', extract_ret_str)
+            
             extract_ret = json.loads(extract_ret_str)
         except:
             try:
@@ -26,6 +33,10 @@ def load_knowIE_data(respond, lang="en"):
                     lambda match: match.group(1).replace('"', r"\""),
                     extract_ret_str,
                 )
+                
+                # FIX: Ensure regex fix is applied
+                extract_ret_str = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', extract_ret_str)
+                
                 extract_ret = json.loads(extract_ret_str)
             except:
                 try:
@@ -38,7 +49,15 @@ def load_knowIE_data(respond, lang="en"):
                     else:
                         extract_ret = extract_ret_str.replace("\\'", "'").replace(
                             '\\"', '"'
-                        )  # .replace('\"Sleazy\"' ,'\\\"Sleazy\\\"').replace('\\\"Planet of the Apes\\\"' ,'Planet of the Apes') #.replace("\\", '\\\\').replace("\'", "\\\'")
+                        )
+                    
+                    # FIX: Ensure regex fix is applied before final parsing attempts
+                    if isinstance(extract_ret, str): # extract_ret might be reassigned above
+                        extract_ret = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', extract_ret)
+                    elif isinstance(extract_ret_str, str):
+                        extract_ret_str = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', extract_ret_str)
+                        extract_ret = extract_ret_str # fallback to str for loads
+                    
                     extract_ret = json.loads(extract_ret)
                 except Exception as e:
                     logger.warning(
@@ -46,7 +65,9 @@ def load_knowIE_data(respond, lang="en"):
                         exc_info=True,
                     )
                     try:
-                        extract_ret = json.loads(extract_ret_str + "}")
+                        # FIX: Apply regex fix
+                        tmp_str = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', extract_ret_str + "}")
+                        extract_ret = json.loads(tmp_str)
                     except:
                         raise ValueError(
                             "the output KnowUnit str is invalid: " + respond
@@ -65,16 +86,29 @@ def load_NER_data(respond):
             extract_ret_str = extract_ret_str.split("output:")[1]
         if "```" in extract_ret_str:
             extract_ret_str = extract_ret_str.split("```")[0]
+        
+        # FIX: Escape invalid backslashes (e.g. in file paths) before parsing
+        # This regex matches a backslash that is NOT followed by a valid JSON escape char
+        extract_ret_str = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', extract_ret_str)
+        
         extract_ret_str = extract_ret_str.replace("\\'", "'")
         extract_ret = json.loads(extract_ret_str)
     except:
         try:
             extract_ret_str = "[" + "[".join(extract_ret_str.split("[")[1:])
             extract_ret_str = "]".join(extract_ret_str.split("]")[:-1]) + "]"
+            
+            # FIX: Apply same fix for retries
+            extract_ret_str = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', extract_ret_str)
+            
             extract_ret = json.loads(extract_ret_str)
         except:
             try:
                 extract_ret_str = extract_ret_str.strip() + "}]"
+                
+                # FIX: Apply same fix for final retry
+                extract_ret_str = re.sub(r'\\(?!["\\/bfnrtu])', r'\\\\', extract_ret_str)
+                
                 extract_ret = json.loads(extract_ret_str)
             except:
                 raise ValueError("the output NER str is invalid: " + respond)

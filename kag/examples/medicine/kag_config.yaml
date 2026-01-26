@@ -1,25 +1,29 @@
 #------------project configuration start----------------#
 openie_llm: &openie_llm
-  type: maas
-  base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
-  api_key: key
-  model: qwen2.5-7b-instruct-1m
+  type: openai
+  base_url: https://api.siliconflow.cn/v1
+  api_key: sk-xmubwjeopdksjenuqmsjkvvipldehyacnmkvghpyoekwqdzz
+  model: Qwen/Qwen3-8B
+  max_rate: 2
+  time_period: 1
   enable_check: false
 
 chat_llm: &chat_llm
-  type: maas
-  base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
-  api_key: key
-  model: qwen2.5-72b-instruct
+  type: openai
+  base_url: https://api.siliconflow.cn/v1
+  api_key: sk-xmubwjeopdksjenuqmsjkvvipldehyacnmkvghpyoekwqdzz
+  model: deepseek-ai/DeepSeek-V3.2
+  stream: true
   enable_check: false
 
 vectorize_model: &vectorize_model
-  api_key: key
+  api_key: sk-xmubwjeopdksjenuqmsjkvvipldehyacnmkvghpyoekwqdzz
   base_url: https://api.siliconflow.cn/v1
-  model: BAAI/bge-m3
+  model: Qwen/Qwen3-Embedding-8B
   type: openai
+  max_rate: 2
+  time_period: 1
   vector_dimensions: 1024
-  enable_check: false
 vectorizer: *vectorize_model
 
 log:
@@ -28,9 +32,9 @@ log:
 project:
   biz_scene: medical
   host_addr: http://127.0.0.1:8887
-  id: '10'
+  id: '59'
   language: zh
-  namespace: Medicine
+  namespace: Medici
   checkpoint_path: ./ckpt
 #------------project configuration end----------------#
 
@@ -172,7 +176,7 @@ kag_hybrid_executor: &kag_hybrid_executor_conf
     - *rc
   merger:
     type: kag_merger
-  enable_summary:  true
+  enable_summary: true
 
 kag_output_executor: &kag_output_executor_conf
   type: kag_output_executor

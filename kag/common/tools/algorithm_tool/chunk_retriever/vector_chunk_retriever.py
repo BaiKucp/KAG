@@ -65,20 +65,107 @@ class VectorChunkRetriever(RetrieverABC):
                     err_msg="query is empty",
                 )
             query_vector = self.vectorize_model.vectorize(query)
-            top_k_docs = self.search_api.search_vector(
-                label=self.schema_helper.get_label_within_prefix(CHUNK_TYPE),
-                property_key="content",
-                query_vector=query_vector,
-                topk=top_k,
-                ef_search=top_k * 7,
-            )
-            top_k_docs_name = self.search_api.search_vector(
-                label=self.schema_helper.get_label_within_prefix(CHUNK_TYPE),
-                property_key="name",
-                query_vector=query_vector,
-                topk=top_k / 2,
-                ef_search=top_k / 2 * 3,
-            )
+            chunk_label = self.schema_helper.get_label_within_prefix(CHUNK_TYPE)
+            logger.info(f"[VectorChunkRetriever] 使用标签: {chunk_label}, score_threshold: {self.score_threshold}")
+            
+            # ============================================================
+            # 智能教材搜索：优先使用已分类的目标教材（支持多教材）
+            # ============================================================
+            chunk_labels = []
+            
+            # 教材名到 Chunk 标签的映射
+            TEXTBOOK_TO_CHUNK = {
+                "pharmacology": "Pharmacology.Chunk",
+                "pathology": "Pathology.Chunk",
+                "physiology": "physiology.Chunk",
+            }
+            
+            # 尝试获取当前问题的教材分类结果
+            try:
+                # 直接导入，不检查 sys.modules（因为模块名可能带路径前缀）
+                from kag_compat_patch import get_current_textbooks
+                target_textbooks = get_current_textbooks()
+                logger.info(f"[VectorChunkRetriever] 获取到目标教材: {target_textbooks}")
+                if target_textbooks:
+                    # 将每个教材名转为 Chunk 标签
+                    for tb in target_textbooks:
+                        tb_lower = tb.lower()
+                        if tb_lower in TEXTBOOK_TO_CHUNK:
+                            chunk_labels.append(TEXTBOOK_TO_CHUNK[tb_lower])
+                    
+                    if chunk_labels:
+                        logger.info(f"[VectorChunkRetriever] 使用目标教材 Chunk 标签: {chunk_labels}")
+            except ImportError:
+                logger.debug("[VectorChunkRetriever] kag_compat_patch 未加载")
+            except Exception as e:
+                logger.debug(f"[VectorChunkRetriever] 获取目标教材失败: {e}")
+            
+            # 如果没有目标教材，从 Neo4j 动态获取所有 Chunk 标签
+            if not chunk_labels:
+                try:
+                    import os
+                    from neo4j import GraphDatabase
+                    
+                    neo4j_uri = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
+                    neo4j_user = os.environ.get("NEO4J_USER", "neo4j")
+                    neo4j_password = os.environ.get("NEO4J_PASSWORD", "neo4j@openspg")
+                    neo4j_database = os.environ.get("NEO4J_DATABASE", "medicine")
+                    
+                    driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_user, neo4j_password))
+                    with driver.session(database=neo4j_database) as session:
+                        result = session.run("""
+                            CALL db.labels() YIELD label
+                            WHERE label ENDS WITH '.Chunk'
+                            RETURN label
+                        """)
+                        chunk_labels = [record["label"] for record in result]
+                    driver.close()
+                    
+                    logger.info(f"[VectorChunkRetriever] 从 Neo4j 动态获取到 {len(chunk_labels)} 个 Chunk 标签: {chunk_labels}")
+                except Exception as e:
+                    logger.warning(f"[VectorChunkRetriever] 动态获取 Chunk 标签失败: {e}")
+                    # 回退到硬编码的默认值
+                    chunk_labels = ["Pathology.Chunk", "Pharmacology.Chunk", "physiology.Chunk"]
+                    logger.info(f"[VectorChunkRetriever] 使用默认 Chunk 标签: {chunk_labels}")
+            
+            top_k_docs = []
+            for ns_label in chunk_labels:
+                try:
+                    docs = self.search_api.search_vector(
+                        label=ns_label,
+                        property_key="content",
+                        query_vector=query_vector,
+                        topk=top_k,
+                        ef_search=top_k * 7,
+                    )
+                    if docs:
+                        logger.info(f"[VectorChunkRetriever] {ns_label} content 搜索返回 {len(docs)} 个结果")
+                        top_k_docs.extend(docs)
+                except Exception as e:
+                    logger.warning(f"[VectorChunkRetriever] {ns_label} 搜索失败: {e}")
+            
+            logger.info(f"[VectorChunkRetriever] 合并后共 {len(top_k_docs)} 个结果")
+            if top_k_docs:
+                for i, doc in enumerate(top_k_docs[:3]):
+                    logger.info(f"[VectorChunkRetriever]   [{i}] score={doc.get('score', 'N/A')}, id={doc.get('node', {}).get('id', 'N/A')[:30]}")
+            
+            # name 搜索也使用多 namespace
+            top_k_docs_name = []
+            for ns_label in chunk_labels:
+                try:
+                    docs = self.search_api.search_vector(
+                        label=ns_label,
+                        property_key="name",
+                        query_vector=query_vector,
+                        topk=top_k / 2,
+                        ef_search=top_k / 2 * 3,
+                    )
+                    if docs:
+                        top_k_docs_name.extend(docs)
+                except Exception as e:
+                    pass
+            
+            logger.info(f"[VectorChunkRetriever] name 搜索返回 {len(top_k_docs_name)} 个结果")
             top_k_docs = top_k_docs_name + top_k_docs
 
             merged = {}

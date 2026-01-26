@@ -171,6 +171,40 @@ class EntityLinking(ToolABC):
                     f"`{name}` Vector-based search with label: Entity completed in {time.time() - vector_search_entity_start_time:.2f} seconds. Found {len(typed_nodes)} nodes."
                 )
 
+            # Also search IndexType (KnowledgeUnit/SubKnowledgeUnit) for better recall
+            index_type_nodes = []
+            try:
+                ku_label = self.schema_helper.get_label_within_prefix("KnowledgeUnit")
+                ku_nodes = self.search_api.search_vector(
+                    label=ku_label,
+                    property_key="content",
+                    query_vector=query_vector,
+                    topk=recall_topk,
+                )
+                index_type_nodes.extend(ku_nodes)
+                logger.info(
+                    f"`{name}` Vector-based search with label: KnowledgeUnit completed. Found {len(ku_nodes)} nodes."
+                )
+            except Exception as ku_err:
+                logger.debug(f"KnowledgeUnit search failed: {ku_err}")
+
+            try:
+                subku_label = self.schema_helper.get_label_within_prefix("SubKnowledgeUnit")
+                subku_nodes = self.search_api.search_vector(
+                    label=subku_label,
+                    property_key="content",
+                    query_vector=query_vector,
+                    topk=recall_topk,
+                )
+                index_type_nodes.extend(subku_nodes)
+                logger.info(
+                    f"`{name}` Vector-based search with label: SubKnowledgeUnit completed. Found {len(subku_nodes)} nodes."
+                )
+            except Exception as subku_err:
+                logger.debug(f"SubKnowledgeUnit search failed: {subku_err}")
+
+            typed_nodes.extend(index_type_nodes)
+
             # Perform an additional vector-based search on the content if the query type is not "Others" or "Entity"
 
             if query_type not in ["Others", "Entity"]:

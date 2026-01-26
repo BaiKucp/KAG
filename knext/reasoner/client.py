@@ -132,9 +132,39 @@ class ReasonerClient(Client):
             return {}
         return resp[0].properties
 
-    def syn_execute(self, dsl_content: str, **kwargs):
+    def _default_request_timeout(self):
+        """Return OpenAPI client's `_request_timeout` from env if configured.
+
+        Supported env vars:
+        - KAG_REST_TIMEOUT_S: total timeout seconds (float/int)
+        - KAG_REST_CONNECT_TIMEOUT_S + KAG_REST_READ_TIMEOUT_S: (connect, read)
+        """
+        total = os.environ.get("KAG_REST_TIMEOUT_S")
+        if total is not None and str(total).strip() != "":
+            try:
+                return float(total)
+            except Exception:
+                return None
+
+        connect = os.environ.get("KAG_REST_CONNECT_TIMEOUT_S")
+        read = os.environ.get("KAG_REST_READ_TIMEOUT_S")
+        if (connect is not None and str(connect).strip() != "") or (
+            read is not None and str(read).strip() != ""
+        ):
+            try:
+                connect_s = float(connect) if connect is not None and str(connect).strip() != "" else 10.0
+                read_s = float(read) if read is not None and str(read).strip() != "" else 300.0
+                return (connect_s, read_s)
+            except Exception:
+                return None
+
+        # Safe default to avoid hanging forever.
+        return (10.0, 300.0)
+
+    def syn_execute(self, dsl_content: str, request_timeout=None, **kwargs):
         task = ReasonTask(project_id=self._project_id, dsl=dsl_content, params=kwargs)
-        return self._rest_client.reason_run_post(reason_task=task)
+        timeout = request_timeout if request_timeout is not None else self._default_request_timeout()
+        return self._rest_client.reason_run_post(reason_task=task, _request_timeout=timeout)
 
 
 if __name__ == "__main__":

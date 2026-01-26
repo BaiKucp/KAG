@@ -71,7 +71,11 @@ class OpenIEEntitystandardizationdPrompt(PromptABC):
         entities = kwargs.get("named_entities", [])
         for entity in standardized_entity:
             merged.append(entity)
-            entities_with_offical_name.add(entity["entity"])
+            if isinstance(entity, dict) and "entity" in entity:
+                entities_with_offical_name.add(entity["entity"])
+            elif isinstance(entity, str):
+                entities_with_offical_name.add(entity)
+
         # in case llm ignores some entities
         for entity in entities:
             if entity["entity"] not in entities_with_offical_name:

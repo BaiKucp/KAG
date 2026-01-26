@@ -1,0 +1,77 @@
+# 教材数据清单 (Textbook Manifest)
+# 用于管理多教材知识抽取任务
+
+# 共享配置文件路径 (相对于此文件，即 Medicine 目录)
+shared_config: ./kag_config.yaml
+
+# 默认目标 Namespace (作为标签前缀，如 Medicine.Chapter)
+default_namespace: Medicine
+
+# 默认 HOST_ADDR
+default_host_addr: http://127.0.0.1:8887
+
+# ============ MinIO 存储配置 ============
+# 注意：MinIO 文件路径由 Java 后端数据库管理，不在此配置
+# 以下配置仅用于 api_server.py 连接 MinIO 下载文件
+minio:
+  enabled: true
+  endpoint: localhost:9000
+  access_key: minio
+  secret_key: minio@openspg
+  bucket: textbooks
+  secure: false
+
+# 所有教材都写入同一个项目 (Medicine)，通过不同 namespace 前缀区分
+# 共用同一个 schema
+
+# 教材列表
+# 注意：本地文件路径仅用于直接运行 indexer.py 时的回退
+# 通过 Java 后端触发抽取时，文件从 MinIO 下载（路径由数据库提供）
+textbooks:
+  # ============ 药理学 ============
+  - id: pharmacology
+    name: 药理学（第10版）
+    namespace: Pharmacology
+    # 本地路径（回退模式 - 用于直接运行 indexer.py 测试）
+    content_file: ./builder/data/13.《药理学（第10版）》绪论到第六章.md
+    catalog_file: ./builder/data/13.《药理学（第10版）》绪论到第六章 -知识点 - .md
+    enabled: true
+    description: 药理学第10版绪论到第六章
+
+  # ============ 病理学 ============
+  - id: pathology
+    name: 病理学（第10版）
+    namespace: Pathology
+    content_file: ./builder/data/14.《病理学（第10版）》-绪论到第四章.md
+    catalog_file: ./builder/data/14.《病理学（第10版）》到第四章 -知识点.md
+    enabled: true
+    description: 病理学第10版绪论到第四章
+
+  # ============ 生理学 ============
+  - id: physiology
+    name: 生理学（第10版）
+    namespace: Physiology
+    content_file: ./builder/data/15.《生理学（第10版）》-绪论到第四章.md
+    catalog_file: ./builder/data/15.《生理学（第10版）》绪论到第四章 -知识点.md
+    enabled: true
+    description: 生理学第10版绪论到第四章
+
+  # ============ 医用高等数学 ============
+  - id: medicine_higher_math
+    name: 医用高等数学（第8版）
+    namespace: MedicineHigherMath
+    content_file: ./builder/data/16.《医用高等数学 （第8版）》 绪论到第四章.md
+    catalog_file: ./builder/data/16.《医用高等数学（第8版）》绪论到第四章知识点.md
+    enabled: true
+    description: 医用高等数学第8版绪论到第四章
+
+  # ============ 病理生理学 ============
+  - id: pathophysiology
+    name: 病理生理学（第10版）
+    namespace: Pathophysiology
+    content_file: ./builder/data/17.《病理生理学 （第10版）》 绪论到第四章.md
+    catalog_file: ./builder/data/17.《病理生理学》（第10版）绪论到第四章知识点.md
+    enabled: true
+    description: 病理生理学第10版绪论到第四章
+
+
